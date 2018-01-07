@@ -5,7 +5,7 @@ var router = express.Router();
 
 //console.log(sensorData);
 
-
+var datetime = require('node-datetime');
 // Load the Cloudant library.
 var Cloudant = require('cloudant');
 
@@ -16,44 +16,39 @@ var password = '2fa835c1a88e237c3219ea76f5eb27ccd966ca1fb2c713701de86e5ce3f8831b
 var cloudant = Cloudant({account: me, password: password});
 
 cloudant.db.list(function (err, allDbs) {
-    console.log('All my databases: %s', allDbs.join(', '))
+    if(allDbs){
+        console.log('All my databases: %s', allDbs.join(', '));
+    }else {
+        console.log(err);
+    }
+
 });
+var time;
+var soil;
+var light;
 
 var db = cloudant.db.use('iotp_3xowkp_sensordata_2018-01');
 
   db.list({include_docs:true}, function (err, data) {
-      console.log(err, data.toString());
+      if(data){
+          for(var i=2; i< data.total_rows; i++) {
+              console.log(datetime.create(data.rows[i].doc.timestamp).format('H:M:S'));
+              console.log(data.rows[i].doc.data.d.soil);
+              console.log(data.rows[i].doc.data.d.light);
+
+              console.log("-----");
+
+          }
+          time = datetime.create(data.rows[2].doc.timestamp).format('m/d/Y H:M:S');
+          soil = data.rows[2].doc.data.d.soil;
+          light = data.rows[2].doc.data.d.light;
+
+      }else{
+          console.log(err);
+      }
       //var sensorData = JSON.parse(data);
       //console.log(sensorData);
   });
-
-  db.get('doc', function (err, data) {
-     console.log(err, data);
-      var sensorData = JSON.parse(data);
-      console.log(sensorData);
-  });
-
-
-// console.log("Reading document 'doc'");
-// db.get('doc', function(err, data) {
-//     console.log('Data:', data);
-//     // keep a copy of the doc so we know its revision token
-//     doc = data;
-// });
-
-// read a document
-var readDocument = function(callback) {
-    console.log("Reading document 'mydoc'");
-    db.get('mydoc', function(err, data) {
-        console.log('Error:', err);
-        console.log('Data:', data);
-        // keep a copy of the doc so we know its revision token
-        doc = data;
-        callback(err, data);
-    });
-};
-
-
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
@@ -61,12 +56,14 @@ router.get('/', function(req, res, next) {
       {
         title : 'IG | Dashboard',
         moistureStatus : 'Normal',
+        moisture : soil,
         percentMoistureChange : '10%',
         commentMoisture : 'increase in today moisture level.',
-        light : '90',
+        light : light,
         lightStatus : 'Not required',
         health : '8',
-        healthStatus : 'Healthy'
+        healthStatus : 'Healthy',
+        time : time
       });
 });
 

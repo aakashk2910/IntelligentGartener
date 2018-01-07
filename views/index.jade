@@ -211,12 +211,55 @@ html(lang='en')
   script(src='/assets/js/ig.js')
   script(type='text/javascript').
       $(document).ready(function() {
+
+          var moistureReading = [];
+          var sensorReadingTime = [];
+          var lightReading = [];
+
+          var datetime = require('node-datetime');
+
+          // Load the Cloudant library.
+          var Cloudant = require('cloudant');
+
+          var me = '270d4676-7828-4e22-a88f-2cd83509be50-bluemix'; // Set this to your own account
+          var password = '2fa835c1a88e237c3219ea76f5eb27ccd966ca1fb2c713701de86e5ce3f8831b';
+
+          // Initialize the library with my account.
+          var cloudant = Cloudant({account: me, password: password});
+
+          cloudant.db.list(function (err, allDbs) {
+              console.log('All my databases: %s', allDbs.join(', '))
+          });
+
+          var db = cloudant.db.use('iotp_3xowkp_sensordata_2018-01');
+
+          db.list({include_docs: true}, function (err, data) {
+              if (data) {
+                  for (var i = 2; i < data.total_rows; i++) {
+                      console.log(datetime.create(data.rows[i].doc.timestamp).format('H:M:S'));
+                      console.log(data.rows[i].doc.data.d.soil);
+                      console.log(data.rows[i].doc.data.d.light);
+
+                      console.log("-----");
+
+                      moistureReading.push(data.rows[i].doc.data.d.soil);
+                      lightReading.push(data.rows[i].doc.data.d.light);
+                      sensorReadingTime.push(datetime.create(data.rows[i].doc.timestamp).format('H:M:S'));
+
+                  }
+
+              } else {
+                  console.log(err);
+              }
+          });
+
+
           /* ----------==========     Daily Heatlh initialization    ==========---------- */
 
           dataHealthChart = {
-              labels: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+              labels: sensorReadingTime,
               series: [
-                  [12, 17, 7, 17, 23, 18, 38]
+                  [2, 7, 7, 7, 3, 8, 8]
               ]
           };
 
@@ -231,7 +274,7 @@ html(lang='en')
                   right: 0,
                   bottom: 0,
                   left: 0
-              },
+              }
           }
 
           var healthChart = new Chartist.Line('#healthChart', dataHealthChart, optionsHealthChart);
@@ -243,9 +286,9 @@ html(lang='en')
       /* ----------==========     Moisture Chart initialization    ==========---------- */
 
       dataMoistureChart = {
-          labels: ['12am', '3pm', '6pm', '9pm', '12pm', '3am', '6am', '9am'],
+          labels: sensorReadingTime,
           series: [
-              [230, 750, 450, 300, 280, 240, 200, 190]
+              moistureReading
           ]
       };
 
@@ -271,10 +314,9 @@ html(lang='en')
           /* ----------==========    Light Chart initialization    ==========---------- */
 
           var dataLightChart = {
-              labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+              labels: lightReading,
               series: [
-                  [542, 443, 320, 780, 553, 453, 326, 434, 568, 610, 756, 895]
-
+                  sensorReadingTime
               ]
           };
           var optionsLightChart = {
@@ -303,7 +345,7 @@ html(lang='en')
           var lightChart = Chartist.Bar('#lightChart', dataLightChart, optionsLightChart, responsiveOptions);
 
           //start animation for the Emails Subscription Chart
-          md.startAnimationForBarChart(light);
+          md.startAnimationForBarChart(lightChart);
 
 
 
@@ -343,18 +385,6 @@ html(lang='en')
           //
           // });
 
-          // ----Cloudant
 
-          // Load the Cloudant library.
-          var Cloudant = require('cloudant');
 
-          var me = '270d4676-7828-4e22-a88f-2cd83509be50-bluemix'; // Set this to your own account
-          var password = '2fa835c1a88e237c3219ea76f5eb27ccd966ca1fb2c713701de86e5ce3f8831b';
-
-          // Initialize the library with my account.
-          var cloudant = Cloudant({account: me, password: password});
-
-          cloudant.db.list(function (err, allDbs) {
-              console.log('All my databases: %s', allDbs.join(', '))
-          });
       });
