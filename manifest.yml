@@ -1,0 +1,5 @@
+---
+applications:
+ - name: ig
+   random-route: true
+   memory: 256M

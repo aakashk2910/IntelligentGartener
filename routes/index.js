@@ -45,29 +45,38 @@ var lightReading = [];
 
 //var test = [];
 
+var dataForML = [];
+
 var db = cloudant.db.use('iotp_3xowkp_sensordata_2018-01');
 
   db.list({include_docs:true}, function (err, data) {
       if(data){
-          for(var i=2; i<= 10; i++) {
-              if(data.rows[i].doc.eventType === 'event'){
-
-                  // console.log(datetime.create(data.rows[i].doc.timestamp).format('H:M:S'));
-                  // console.log(data.rows[i].doc.data.d.soil);
-                  // console.log(data.rows[i].doc.data.d.light);
-                  //
-                  // console.log("-----");
-
-                  //test.push([(i-1), (data.rows[i].doc.data.d.soil)]);
-
-                  moistureReading.push((data.rows[i].doc.data.d.soil / 1024) * 100);
-                  lightReading.push((data.rows[i].doc.data.d.light /1024) * 100 );
-                  sensorReadingTime.push(datetime.create(data.rows[i].doc.timestamp).format('M'));
+          var count=0;
+          for(var i=data.rows.length; count<20 && i >= 0;i--) {
+              if(data.rows[i] && data.rows[i].doc.eventType === 'event'){
+                  if(data.rows[i].doc.data.d != null ){
+                    if(count<10){
+                      moistureReading.push((data.rows[i].doc.data.d.soil / 1024) * 100);
+                      lightReading.push((data.rows[i].doc.data.d.light /1024) * 100 );
+                      sensorReadingTime.push(datetime.create(data.rows[i].doc.timestamp).format('M'));
+                    }
+                    if(data.rows[i].doc.data.d.soil ){
+                      dataForML.push([count+1,((data.rows[i].doc.data.d.soil ))])
+                      count++;
+                    }
+                  }
               }
           }
           time = datetime.create(data.rows[2].doc.timestamp).format('m/d/Y H:M:S');
           soil = data.rows[2].doc.data.d.soil;
           light = data.rows[2].doc.data.d.light;
+          console.log(dataForML);      
+          //var test =[[1, 1], [2, 67], [3, 79], [4, 127], [5, 100], [6, 96], [7, 80], [8, 69], [9, 60]];
+
+          console.log('input data to regression --- '+ dataForML);
+          console.log('model: '+util.inspect(regression.polynomial(dataForML, {order : 2}), false, null));
+          console.log('regression --- ' + regression.polynomial(dataForML, {order : 2}).predict(2));
+
 
       }else{
           console.log(err);
@@ -99,35 +108,10 @@ router.get('/', function(req, res, next) {
     });
 });
 
-var Client = require('ibmiotf');
-
-var config = {
-    "org": "3xowkp",
-    "id": "garden",
-    "domain": "internetofthings.ibmcloud.com",
-    "type": "RaspberryPi3",
-    "auth-method": "token",
-    "auth-token": "asoubdou32beuabsd13",
-    "auth-key" : "a-3xowkp-icxxqn72s7",
-    //"auth-token" : "EZOEcu!DqRn9JxmLK("
-};
-
-
-
-// Event Push
-var deviceClient = new Client.IotfDevice(config);
-
-deviceClient.connect();
-
-deviceClient.on("connect", function () {
-    //publishing event using the default quality of service
-    deviceClient.publish("status","json",'{"d" : { "cpu" : 60, "mem" : 50 }}');
-});
-
-
 
 // ML Decision Tree
 
+/*
 var ml = require('machine_learning');
 
 var data =[['sand', 12, 5, 8],
@@ -163,6 +147,7 @@ console.log("Classify : ", dt.classify(['loam', 25, 10, 20]));
 dt.prune(1.0); // 1.0 : mingain.
 dt.print();
 
+*/
 
 
 //SVM
@@ -226,12 +211,32 @@ dt.print();
 // ], {order : 3}).predict(9));
 
 
-var test =[[1, 1], [2, 67], [3, 79], [4, 127], [5, 100], [6, 96], [7, 80], [8, 69], [9, 60]];
 
-console.log('input data to regression --- '+ test);
 
-console.log('regression --- ' + regression.polynomial(test, {order : 3}).predict(10));
-console.log(util.inspect(regression.polynomial(test, {order : 3}), false, null));
+var Client = require('ibmiotf');
+
+var config = {
+    "org": "3xowkp",
+    "id": "garden",
+    "domain": "internetofthings.ibmcloud.com",
+    "type": "RaspberryPi3",
+    "auth-method": "token",
+    "auth-token": "asoubdou32beuabsd13",
+    //"auth-key" : "a-3xowkp-icxxqn72s7",
+    //"auth-token" : "EZOEcu!DqRn9JxmLK("
+};
+
+
+// Event Push
+var deviceClient = new Client.IotfDevice(config);
+
+deviceClient.connect();
+
+deviceClient.on("connect", function () {
+    //publishing event using the default quality of service
+    deviceClient.publish("status","json",'{"d" : null, "event":"water" }');
+});
+
 
 //Routes
 
