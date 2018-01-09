@@ -212,47 +212,10 @@ html(lang='en')
   script(type='text/javascript').
       $(document).ready(function() {
 
-          var moistureReading = [];
-          var sensorReadingTime = [];
-          var lightReading = [];
 
-          var datetime = require('node-datetime');
-
-          // Load the Cloudant library.
-          var Cloudant = require('cloudant');
-
-          var me = '270d4676-7828-4e22-a88f-2cd83509be50-bluemix'; // Set this to your own account
-          var password = '2fa835c1a88e237c3219ea76f5eb27ccd966ca1fb2c713701de86e5ce3f8831b';
-
-          // Initialize the library with my account.
-          var cloudant = Cloudant({account: me, password: password});
-
-          cloudant.db.list(function (err, allDbs) {
-              console.log('All my databases: %s', allDbs.join(', '))
-          });
-
-          var db = cloudant.db.use('iotp_3xowkp_sensordata_2018-01');
-
-          db.list({include_docs: true}, function (err, data) {
-              if (data) {
-                  for (var i = 2; i < data.total_rows; i++) {
-                      console.log(datetime.create(data.rows[i].doc.timestamp).format('H:M:S'));
-                      console.log(data.rows[i].doc.data.d.soil);
-                      console.log(data.rows[i].doc.data.d.light);
-
-                      console.log("-----");
-
-                      moistureReading.push(data.rows[i].doc.data.d.soil);
-                      lightReading.push(data.rows[i].doc.data.d.light);
-                      sensorReadingTime.push(datetime.create(data.rows[i].doc.timestamp).format('H:M:S'));
-
-                  }
-
-              } else {
-                  console.log(err);
-              }
-          });
-
+          var moistureReading = JSON.parse('!{moistureReading}');
+          var sensorReadingTime = JSON.parse('!{sensorReadingTime}');
+          var lightReading = JSON.parse('!{lightReading}');
 
           /* ----------==========     Daily Heatlh initialization    ==========---------- */
 
@@ -268,9 +231,9 @@ html(lang='en')
                   tension: 0
               }),
               low: 0,
-              high: 50, // creative tim: we recommend you to set the high sa the biggest value + something for a better look
+              high: 10, // creative tim: we recommend you to set the high sa the biggest value + something for a better look
               chartPadding: {
-                  top: 0,
+                  top: 2,
                   right: 0,
                   bottom: 0,
                   left: 0
@@ -297,9 +260,9 @@ html(lang='en')
               tension: 0
           }),
           low: 0,
-          high: 1000, // creative tim: we recommend you to set the high sa the biggest value + something for a better look
+          high: 100, // creative tim: we recommend you to set the high sa the biggest value + something for a better look
           chartPadding: {
-              top: 0,
+              top: 2,
               right: 0,
               bottom: 0,
               left: 0
@@ -314,9 +277,9 @@ html(lang='en')
           /* ----------==========    Light Chart initialization    ==========---------- */
 
           var dataLightChart = {
-              labels: lightReading,
+              labels: sensorReadingTime,
               series: [
-                  sensorReadingTime
+                  lightReading
               ]
           };
           var optionsLightChart = {
@@ -324,9 +287,9 @@ html(lang='en')
                   showGrid: false
               },
               low: 0,
-              high: 1000,
+              high: 100,
               chartPadding: {
-                  top: 0,
+                  top: 2,
                   right: 5,
                   bottom: 0,
                   left: 0
@@ -346,45 +309,6 @@ html(lang='en')
 
           //start animation for the Emails Subscription Chart
           md.startAnimationForBarChart(lightChart);
-
-
-
-          // klsklds
-
-
-          // var Client = require('ibmiotf');
-          //
-          // var config = {
-          //     "org": "3xowkp",
-          //     "id": "garden",
-          //     "domain": "internetofthings.ibmcloud.com",
-          //     "type": "RaspberryPi3",
-          //     //"auth-method": "token",
-          //     //"auth-token": "asoubdou32beuabsd13",
-          //     "auth-key": "a-3xowkp-icxxqn72s7",
-          //     "auth-token": "EZOEcu!DqRn9JxmLK("
-          // };
-          //
-          // var deviceClient = new Client.IotfApplication(config);
-          //
-          // deviceClient.connect();
-          //
-          // deviceClient.on('connect', function () {
-          //     deviceClient.subscribeToDeviceEvents();
-          // });
-          //
-          // /*window.onbeforeunload = function () {
-          //     deviceClient.disconnect();
-          //     // handle the exit event
-          // };*/
-          //
-          // deviceClient.on("deviceEvent", function (deviceType, deviceId, eventType, format, payload) {
-          //
-          //     console.log("Device Event from :: " + deviceType + " : " + deviceId + " of event " + eventType + " with payload : " + payload);
-          //     moisture = payload;
-          //
-          // });
-
 
 
       });

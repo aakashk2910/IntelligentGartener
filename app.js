@@ -44,18 +44,4 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
-
-var Client = require('ibmiotf');
-
-var config = {
-    "org": "3xowkp",
-    "id": "garden",
-    "domain": "internetofthings.ibmcloud.com",
-    "type": "RaspberryPi3",
-    //"auth-method": "token",
-    //"auth-token": "asoubdou32beuabsd13",
-    "auth-key" : "a-3xowkp-icxxqn72s7",
-    "auth-token" : "EZOEcu!DqRn9JxmLK("
- };
-
 module.exports = app;
