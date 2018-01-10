@@ -45,6 +45,28 @@ var lightReading = [];
 
 //var test = [];
 
+var Forecast = require('forecast');
+
+// Initialize
+var forecast = new Forecast({
+  service: 'darksky',
+  key: 'f62d609f3f2e23d60813eb10b736894d',
+  units: 'celcius',
+  cache: true,      // Cache API requests
+  ttl: {            // How long to cache requests. Uses syntax from moment.js: http://momentjs.com/docs/#/durations/creating/
+    minutes: 27,
+    seconds: 45
+  }
+});
+
+// Retrieve weather information from coordinates (Munich, Germany)
+forecast.get([48.1351, 11.5820], function(err, weather) {
+  if(err) return console.dir(err);
+  console.dir(weather);
+});
+
+
+
 var dataForML = [];
 
 var db = cloudant.db.use('iotp_3xowkp_sensordata_2018-01');
@@ -239,6 +261,17 @@ deviceClient.on("connect", function () {
 
 
 //Routes
+
+router.get('/notification', function(req, res, next) {
+    // Retrieve weather information from coordinates (Munich, Germany)
+forecast.get([48.1351, 11.5820], function(err, weather) {
+  if(err) return console.dir(err);
+  res.json(weather);
+});
+
+
+});
+
 
 router.get('/user', function(req, res, next) {
     res.render('user', {title: 'IG | User'});

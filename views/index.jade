@@ -203,8 +203,6 @@ html(lang='en')
   script(src='/assets/js/perfect-scrollbar.jquery.min.js')
   // Notifications Plugin
   script(src='/assets/js/bootstrap-notify.js')
-  // Google Maps Plugin
-  script(type='text/javascript', src='https://maps.googleapis.com/maps/api/js?key=YOUR_KEY_HERE')
   // Material Dashboard javascript methods
   script(src='/assets/js/material-dashboard.js?v=1.2.0')
   // Material Dashboard ig methods, don't include it in your project!
@@ -310,5 +308,22 @@ html(lang='en')
           //start animation for the Emails Subscription Chart
           md.startAnimationForBarChart(lightChart);
 
+          function doPoll(){
+              $.get('/notification', function(data) {
+                  //alert(data);  // process results here
+                  var notify = $.notify('This can be a notification !', {
+                    type: 'success',
+                    allow_dismiss: true,
+                    showProgressbar: false
+                  });
+
+                  setTimeout(function() {
+                    $.notifyClose();
+                  }, 4000);
+                  setTimeout(doPoll,5000);
+              });
+          }
+
+          doPoll();
 
       });
