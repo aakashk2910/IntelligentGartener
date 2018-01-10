@@ -75,7 +75,7 @@ var db = cloudant.db.use('iotp_3xowkp_sensordata_2018-01');
       if(data){
           var count=0;
           for(var i=data.rows.length; count<20 && i >= 0;i--) {
-              if(data.rows[i] && data.rows[i].doc.eventType === 'event'){
+              if(data.rows[i]){
                   if(data.rows[i].doc.data.d != null ){
                     if(count<10){
                       moistureReading.push((data.rows[i].doc.data.d.soil / 1024) * 100);
@@ -83,7 +83,8 @@ var db = cloudant.db.use('iotp_3xowkp_sensordata_2018-01');
                       sensorReadingTime.push(datetime.create(data.rows[i].doc.timestamp).format('M'));
                     }
                     if(data.rows[i].doc.data.d.soil ){
-                      dataForML.push([count+1,((data.rows[i].doc.data.d.soil ))])
+                      console.log((data.rows[i].doc.data.d.soil /1024) * 100 );
+                      dataForML.push([count+1,((data.rows[i].doc.data.d.soil /1024) * 100 )])
                       count++;
                     }
                   }
@@ -96,8 +97,9 @@ var db = cloudant.db.use('iotp_3xowkp_sensordata_2018-01');
           //var test =[[1, 1], [2, 67], [3, 79], [4, 127], [5, 100], [6, 96], [7, 80], [8, 69], [9, 60]];
 
           console.log('input data to regression --- '+ dataForML);
-          console.log('model: '+util.inspect(regression.polynomial(dataForML, {order : 2}), false, null));
-          console.log('regression --- ' + regression.polynomial(dataForML, {order : 2}).predict(2));
+          console.log('model: '+util.inspect(regression.polynomial(dataForML, {order : 1}), false, null));
+          for(var i=21;i<=25;i++)
+            console.log('regression --- ' + regression.polynomial(dataForML, {order :1 }).predict(i));
 
 
       }else{
