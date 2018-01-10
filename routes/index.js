@@ -72,33 +72,57 @@ forecast.get([48.1351, 11.5820], function(err, weather) {
   //console.dir(weather);
 });
 
+  var dataForML = [];
 
-var dataForML = [];
 
 var db = cloudant.db.use('iotp_3xowkp_sensordata_2018-01');
 
-  db.list({include_docs:true}, function (err, data) {
+ db.find({
+   "selector": {
+      "_id": {
+         "$gt": "0"
+      }
+   },
+   "fields": [
+      "_id",
+      "data",
+      "eventType",
+      "timestamp"
+   ],
+   "sort": [
+      {
+         "timestamp": "desc"
+      }
+   ],
+   "limit": 50
+},
+   function (err, data) {
+      var originalData = [];
+      console.log(data);
       if(data){
           var count=0;
-          for(var i=data.rows.length; count<20 && i >= 0;i--) {
-              if(data.rows[i]){
-                  if(data.rows[i].doc.eventType=='event' && data.rows[i].doc.data.d != null ){
+          for(var i=0; count<20 && i < data.docs.length;i++) {
+              if(data.docs[i]){
+                  if(data.docs[i].eventType=='event' && data.docs[i].data.d != null ){
                     if(count<10){
-                      moistureReading.push((data.rows[i].doc.data.d.soil / 1024) * 100);
-                      lightReading.push((data.rows[i].doc.data.d.light /1024) * 100 );
-                      sensorReadingTime.push(datetime.create(data.rows[i].doc.timestamp).format('M'));
+                      moistureReading.push((data.docs[i].data.d.soil / 1024) * 100);
+                      lightReading.push((data.docs[i].data.d.light /1024) * 100 );
+                      sensorReadingTime.push(datetime.create(data.docs[i].timestamp).format('M'));
                     }
-                    if(data.rows[i].doc.data.d.soil ){
+                    if(data.docs[i].data.d.soil ){
                       //console.log((data.rows[i].doc.data.d.soil /1024) * 100 );
-                      dataForML.push([count+1,((data.rows[i].doc.data.d.soil /1024) * 100 )])
+                      dataForML.push([count+1,((data.docs[i].data.d.soil /1024) * 100 )])
+                      originalData.push([count+1,((data.docs[i].data.d.soil ) )]);
                       count++;
                     }
                   }
               }
           }
-          time = datetime.create(data.rows[2].doc.timestamp).format('m/d/Y H:M:S');
-          soil = data.rows[2].doc.data.d.soil;
-          light = data.rows[2].doc.data.d.light;
+          time = datetime.create(data.docs[2].timestamp).format('m/d/Y H:M:S');
+          if(data.docs[2].data.d!=null){
+            soil = data.docs[2].data.d.soil;
+            light = data.docs[2].data.d.light;
+          }
           
           //var test =[[1, 1], [2, 67], [3, 79], [4, 127], [5, 100], [6, 96], [7, 80], [8, 69], [9, 60]];
 
@@ -117,51 +141,115 @@ var db = cloudant.db.use('iotp_3xowkp_sensordata_2018-01');
 
 
 function decide(){
-    
-  var model = regression.polynomial(dataForML, {order : 1});
-  var slope = model.equation[0];
-  var constant = model.equation[1];
-  var wiltingPoint = soilTypeObject.soilType[6].wiltingPoint; 
-  var fieldCapacity = soilTypeObject.soilType[6].fieldCapacity; 
+  
+   dataForML = [];
+   moistureReading = [];
+  lightReading = [];
+  sensorReadingTime = [];
+  var db = cloudant.db.use('iotp_3xowkp_sensordata_2018-01');
 
-  if(dataForML[19][1]>=wiltingPoint && dataForML[19][1] <= fieldCapacity){ //if its inside the range
-    return "Good condition";
-  }else if(dataForML[19][1] <=wiltingPoint){
-    if(slope>0.0){
-        var timeUnit = (wiltingPoint - constant) / slope;
-        console.log("Time unit"+model.predict(timeUnit));
-        return  "The soil may reach minimum recommended soil moisture level in "+ ((timeUnit * 3)/60)+ ' minutes from the last reported sensor data. There is an increasing trend in soil moisture';
-    } else {
-      var willItRain = false;
-      forecast.get([48.1351, 11.5820], function(err, weather) {
-        if(err) return console.dir(err);
-        if(weather.currently.summary.toUpperCase().includes("RAIN"))
-          willItRain = true;
-      });
-      if(willItRain)
-        return  "It might rain ! Automated watering is not performed !";        
-      pushWaterEvent();
+try{
+db.find({
+   "selector": {
+      "_id": {
+         "$gt": "0"
+      }
+   },
+   "fields": [
+      "_id",
+      "data",
+      "eventType",
+      "timestamp"
+   ],
+   "sort": [
+      {
+         "timestamp": "desc"
+      }
+   ],
+   "limit": 50
+},
+   function (err, data) {
+      var originalData = [];
+      console.log(data);
+      if(data){
+          var count=0;
+          for(var i=0; count<20 && i < data.docs.length;i++) {
+              if(data.docs[i]){
+                  if(data.docs[i].eventType=='event' && data.docs[i].data.d != null ){
+                    if(count<10){
+                      moistureReading.push((data.docs[i].data.d.soil / 1024) * 100);
+                      lightReading.push((data.docs[i].data.d.light /1024) * 100 );
+                      sensorReadingTime.push(datetime.create(data.docs[i].timestamp).format('M'));
+                    }
+                    if(data.docs[i].data.d.soil ){
+                      //console.log((data.rows[i].doc.data.d.soil /1024) * 100 );
+                      dataForML.push([count+1,((data.docs[i].data.d.soil /1024) * 100 )])
+                      originalData.push([count+1,((data.docs[i].data.d.soil ) )]);
+                      count++;
+                    }
+                  }
+              }
+          }
+          time = datetime.create(data.docs[2].timestamp).format('m/d/Y H:M:S');
+          if(data.docs[2].data.d!=null){
+            soil = data.docs[2].data.d.soil;
+            light = data.docs[2].data.d.light;
+          }
+          var model = regression.polynomial(dataForML.reverse(), {order : 1});
+          var slope = model.equation[0];
+          var constant = model.equation[1];
+          var wiltingPoint = soilTypeObject.soilType[6].wiltingPoint; 
+          var fieldCapacity = soilTypeObject.soilType[6].fieldCapacity; 
+          console.log(originalData);
+          if(dataForML[0][1]>=wiltingPoint && dataForML[0][1] <= fieldCapacity){ //if its inside the range
+            decision =  "Good condition";
+          }else if(dataForML[0][1] <=wiltingPoint){
+            if(slope>0.0){
+                var timeUnit = (wiltingPoint - constant) / slope;
+                console.log("Time unit"+model.predict(timeUnit));
+                decision =   "The soil may reach minimum recommended soil moisture level in "+ ((timeUnit * 3)/60)+ ' minutes from the last reported sensor data. There is an increasing trend in soil moisture';
+            } else {
+              var willItRain = false;
+              forecast.get([48.1351, 11.5820], function(err, weather) {
+                if(err) decision =  console.dir(err);
+                if(weather.currently.summary.toUpperCase().includes("RAIN"))
+                  willItRain = true;
+              });
+              if(willItRain)
+                decision =   "It might rain ! Automated watering is not performed !";        
+              pushWaterEvent();
 
-      return  "The soil requires watering ! Automated watering is being perfomed ! ";
-    }
-  }else if(dataForML[19][1] >= fieldCapacity){
-    return  "The soil contains exccess water! Please consider draining !";
-  }
+              decision =   "The soil requires watering ! Automated watering is being perfomed ! ";
+            }
+          }else if(dataForML[0][1] >= fieldCapacity){
+            decision =   "The soil contains exccess water! Please consider draining !";
+          }
 
-  return "No Decision made!"
+      }else{
+          console.log(err);
+          decision =  "Error";
+      }
+     
+  });
+}catch(err){
+  
+}
+ 
+
+  
 }
 
 
 var nodeSchedule = require("node-schedule")
 
-nodeSchedule.scheduleJob('*/5 * * * * *', function(){
+nodeSchedule.scheduleJob('*/10 * * * * *', function(){
   decision = decide();
-  console.log('decision: '+decision);
+  console.log(" Scheduler ! ");
 });
 
-
-function pushWaterEvent(){
         var Client = require('ibmiotf');
+function pushWaterEvent(){
+
 
       var config = {
           "org": "3xowkp",
@@ -174,8 +262,8 @@ function pushWaterEvent(){
           //"auth-token" : "EZOEcu!DqRn9JxmLK("
       };
 
-
-      // Event Push
+      try {
+              // Event Push
       var deviceClient = new Client.IotfDevice(config);
 
       deviceClient.connect();
@@ -184,6 +272,12 @@ function pushWaterEvent(){
           //publishing event using the default quality of service
           deviceClient.publish("status","json",'{"d" : null, "event":"water" }');
       });
+    }
+    catch(err) {
+        console.log("IOT Connection failed");
+    }
+
+
 }
 
 
@@ -216,6 +310,7 @@ router.get('/notification', function(req, res, next) {
     // Retrieve weather information from coordinates (Munich, Germany)
     var obj= {};
     obj.decision = decision;
+    console.log(decision);
     res.json(obj);
 });
 
