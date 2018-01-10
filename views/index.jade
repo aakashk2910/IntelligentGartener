@@ -208,6 +208,7 @@ html(lang='en')
   // Material Dashboard ig methods, don't include it in your project!
   script(src='/assets/js/ig.js')
   script(type='text/javascript').
+      var decision = '';
       $(document).ready(function() {
 
 
@@ -311,16 +312,19 @@ html(lang='en')
           function doPoll(){
               $.get('/notification', function(data) {
                   //alert(data);  // process results here
-                  var notify = $.notify('This can be a notification !', {
-                    type: 'success',
-                    allow_dismiss: true,
-                    showProgressbar: false
-                  });
+                    if(data.decision != decision) {
+                      decision = data.decision;
+                      var notify = $.notify(decision, {
+                        type: 'success',
+                        allow_dismiss: true,
+                        showProgressbar: false
+                      });
 
-                  setTimeout(function() {
-                    $.notifyClose();
-                  }, 4000);
-                  setTimeout(doPoll,5000);
+                      setTimeout(function() {
+                        $.notifyClose();
+                      }, 4000);
+                      setTimeout(doPoll,15000);
+                  }
               });
           }
 
