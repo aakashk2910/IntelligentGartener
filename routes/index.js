@@ -14,9 +14,13 @@ var schedule = require('node-schedule');
 
 var regression = require('regression')
 
+var predict = [];
+
 var datetime = require('node-datetime');
 // Load the Cloudant library.
 var Cloudant = require('cloudant');
+
+var weather = "Unknown";
 
 var me = '270d4676-7828-4e22-a88f-2cd83509be50-bluemix'; // Set this to your own account
 var password = '2fa835c1a88e237c3219ea76f5eb27ccd966ca1fb2c713701de86e5ce3f8831b';
@@ -123,12 +127,11 @@ var db = cloudant.db.use('iotp_3xowkp_sensordata_2018-01');
             soil = data.docs[2].data.d.soil;
             light = data.docs[2].data.d.light;
           }
-          
           //var test =[[1, 1], [2, 67], [3, 79], [4, 127], [5, 100], [6, 96], [7, 80], [8, 69], [9, 60]];
 
          // console.log('input data to regression --- '+ dataForML);
          // console.log('model: '+util.inspect(regression.polynomial(dataForML, {order : 1}), false, null));
-          console.log(decide());
+          //console.log(decide());
 
 
       }else{
@@ -170,7 +173,6 @@ db.find({
 },
    function (err, data) {
       var originalData = [];
-      console.log(data);
       if(data){
           var count=0;
           for(var i=0; count<20 && i < data.docs.length;i++) {
@@ -196,18 +198,23 @@ db.find({
             light = data.docs[2].data.d.light;
           }
           var model = regression.polynomial(dataForML.reverse(), {order : 1});
+
+          predict = model.points;
+          console.log(predict);
           var slope = model.equation[0];
           var constant = model.equation[1];
           var wiltingPoint = soilTypeObject.soilType[6].wiltingPoint; 
           var fieldCapacity = soilTypeObject.soilType[6].fieldCapacity; 
-          console.log(originalData);
-          if(dataForML[0][1]>=wiltingPoint && dataForML[0][1] <= fieldCapacity){ //if its inside the range
+          if(dataForML[19][1]>=wiltingPoint && dataForML[19][1] <= fieldCapacity){ //if its inside the range
             decision =  "Good condition";
-          }else if(dataForML[0][1] <=wiltingPoint){
+          }else if(dataForML[19][1] <=wiltingPoint){
             if(slope>0.0){
                 var timeUnit = (wiltingPoint - constant) / slope;
                 console.log("Time unit"+model.predict(timeUnit));
-                decision =   "The soil may reach minimum recommended soil moisture level in "+ ((timeUnit * 3)/60)+ ' minutes from the last reported sensor data. There is an increasing trend in soil moisture';
+                var calc = ((timeUnit * 3)/60);
+                if(calc<0)
+                  calc = 0;
+                decision =   "The soil may reach minimum recommended soil moisture level in "+ calc + ' minutes from the last reported sensor data. There is an increasing trend in soil moisture';
             } else {
               var willItRain = false;
               forecast.get([48.1351, 11.5820], function(err, weather) {
@@ -221,7 +228,7 @@ db.find({
 
               decision =   "The soil requires watering ! Automated watering is being perfomed ! ";
             }
-          }else if(dataForML[0][1] >= fieldCapacity){
+          }else if(dataForML[19][1] >= fieldCapacity){
             decision =   "The soil contains exccess water! Please consider draining !";
           }
 
@@ -232,19 +239,24 @@ db.find({
      
   });
 }catch(err){
-  
+
 }
  
 
   
 }
 
+decide();
 
 var nodeSchedule = require("node-schedule")
 
 nodeSchedule.scheduleJob('*/10 * * * * *', function(){
   decision = decide();
   console.log(" Scheduler ! ");
+    forecast.get([48.1351, 11.5820], function(err, weatherRpt) {
+                if(err) decision =  console.dir(err);
+                weather = weatherRpt.currently.summary;
+              });
 });
 
         var Client = require('ibmiotf');
@@ -283,6 +295,12 @@ function pushWaterEvent(){
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
+  var data = [];
+  var max=100;
+  for(j=0;j<10;j++){
+    data.push(predict[j][1]);
+  }
+
   res.render('index',
       {
         title : 'IG | Dashboard',
@@ -295,10 +313,12 @@ router.get('/', function(req, res, next) {
         health : '8',
         healthStatus : 'Healthy',
         time : time,
-
-        moistureReading : JSON.stringify(moistureReading),
-        sensorReadingTime : JSON.stringify(sensorReadingTime),
-        lightReading : JSON.stringify(lightReading)
+        decision: decision,
+        weather: weather,
+        moistureReading : JSON.stringify(moistureReading.reverse()),
+        sensorReadingTime : JSON.stringify(sensorReadingTime.reverse()),
+        lightReading : JSON.stringify(lightReading.reverse()),
+        dataForML: JSON.stringify(data)
 
     });
 });
@@ -314,6 +334,14 @@ router.get('/notification', function(req, res, next) {
     res.json(obj);
 });
 
+
+router.get('/sensordata', function(req, res, next) {
+    // Retrieve weather information from coordinates (Munich, Germany)
+    var obj= {};
+    obj.soil = soil;
+    obj.light = light;
+    res.json(obj);
+});
 
 router.get('/user', function(req, res, next) {
     res.render('user', {title: 'IG | User'});
