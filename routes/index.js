@@ -214,7 +214,7 @@ db.find({
                 var calc = ((timeUnit * 3)/60);
                 if(calc<0)
                   calc = 0;
-                decision =   "The soil may reach minimum recommended soil moisture level in "+ calc + ' minutes from the last reported sensor data. There is an increasing trend in soil moisture';
+                decision =   "The soil may reach minimum recommended soil moisture level in "+ calc + ' minutes from the last reported sensor data. ';
             } else {
               var willItRain = false;
               forecast.get([48.1351, 11.5820], function(err, weather) {
